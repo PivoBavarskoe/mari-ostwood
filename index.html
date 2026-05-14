@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SYSTEM_TERMINAL // MI-O DATABASE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050505; --fg: #FFFFFF; --dim: #333333; --accent: #00ff9d; --warn: #ff3333;
+    --font-pixel: 'Press Start 2P', cursive; --font-mono: 'Share Tech Mono', monospace;
+  }
+  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; outline: none; }
+  body { background-color: var(--bg); color: var(--fg); height: 100vh; overflow: hidden; font-family: var(--font-mono); position: relative; }
+
+  /* === INTRO === */
+  #intro-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+  #intro-screen.hidden { display: none; }
+  .intro-load-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--dim); }
+  .intro-load-progress { height: 100%; background: var(--fg); width: 0%; transition: width 0.3s steps(5); }
+  .intro-side { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--font-pixel); font-size: 0.5rem; color: var(--dim); opacity: 0.4; transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+  .intro-side.left { left: 40px; text-align: right; } .intro-side.right { right: 40px; text-align: left; }
+  .intro-loader-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 1s cubic-bezier(0.22, 1, 0.36, 1); }
+  .intro-loader-container.done { left: 70%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  .intro-circle { width: 80px; height: 80px; position: relative; }
+  .intro-circle::before { content: ''; position: absolute; inset: 0; border: 4px solid var(--dim); border-radius: 50%; }
+  .intro-circle::after { content: ''; position: absolute; inset: 0; border: 4px solid transparent; border-top-color: var(--fg); border-radius: 50%; animation: loadSpin 3s ease-in-out infinite; }
+  .intro-processes { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); text-align: center; font-family: var(--font-mono); font-size: 0.7rem; color: var(--dim); opacity: 0.5; transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+  .intro-processes.done { bottom: 40%; opacity: 0; }
+  .process-line { margin: 5px 0; animation: fadeIn 0.5s steps(2) forwards; opacity: 0; }
+  .process-line:nth-child(n) { animation-delay: calc(0.5s * var(--n, 1)); }
+  @keyframes fadeIn { to { opacity: 0.6; } }
+  .intro-tabs { position: absolute; left: -300px; top: 50%; transform: translateY(-50%); transition: all 1s cubic-bezier(0.22, 1, 0.36, 1); }
+  .intro-tabs.done { left: 15%; }
+
+  /* === UI ELEMENTS === */
+  .win-toggle-btn { position: fixed; top: 12px; right: -28px; width: 32px; height: 32px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; z-index: 1001; opacity: 0.15; transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--fg); }
+  .win-toggle-btn:hover, .win-toggle-btn.active { right: 10px; opacity: 0.7; }
+  .windows-watermark { position: fixed; bottom: 25px; right: 25px; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; line-height: 1.4; color: rgba(200,200,200,0.35); text-align: right; pointer-events: none; z-index: 998; opacity: 0; transition: opacity 0.6s; }
+  .windows-watermark.visible { opacity: 1; }
+  .closing-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-pixel); }
+  .closing-overlay.active { display: flex; }
+  .closing-text { font-size: 1.2rem; margin-bottom: 30px; text-align: center; animation: blink 0.5s steps(2) infinite; color: var(--warn); }
+  .closing-subtext { font-size: 0.7rem; color: var(--dim); margin-top: 20px; }
+  .closing-loader { width: 200px; height: 20px; border: 2px solid var(--dim); margin-top: 20px; position: relative; overflow: hidden; }
+  .closing-loader-bar { height: 100%; background: var(--fg); width: 0%; transition: width 0.1s linear; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* === MARQUEE & BG === */
+  .marquee-bar { position: fixed; left: 0; width: 100%; background: var(--fg); color: var(--bg); font-family: var(--font-pixel); font-size: 0.65rem; padding: 6px 0; z-index: 100; overflow: hidden; white-space: nowrap; border-bottom: 2px solid var(--dim); }
+  .marquee-bar.top { top: 0; } .marquee-bar.bottom { bottom: 0; border-bottom: none; border-top: 2px solid var(--dim); }
+  .marquee-content { display: inline-block; animation: scrollText 25s linear infinite; }
+  @keyframes scrollText { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+  #matrix-bg { position: fixed; inset: 0; z-index: -2; opacity: 0.15; }
+  .bg-grid { position: fixed; inset: 0; z-index: -1; background-image: linear-gradient(var(--dim) 1px, transparent 1px), linear-gradient(90deg, var(--dim) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.1; }
+  .vignette { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.9) 100%); pointer-events: none; }
+  .glow-effect { position: fixed; inset: 0; z-index: 1; background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.03) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.02) 0%, transparent 50%); animation: glowPulse 8s ease-in-out infinite; pointer-events: none; }
+  @keyframes glowPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  #eq-bg { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0.28; filter: blur(0.8px); }
+  #secret-overlay { position: fixed; inset: 0; z-index: 9995; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+  #secret-overlay.active { opacity: 1; animation: glitchShake 0.1s infinite; }
+  .secret-word { font-family: var(--font-pixel); font-size: clamp(4rem, 25vw, 18rem); color: var(--fg); text-shadow: 0 0 20px var(--fg), 0 0 40px var(--fg), 4px 4px 0 var(--dim), -4px -4px 0 var(--dim); animation: secretPulse 0.3s steps(2) infinite, glitchFlicker 2s infinite; }
+  @keyframes secretPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  @keyframes glitchShake { 0% { transform: translate(0, 0); } 25% { transform: translate(-2px, 2px); } 50% { transform: translate(2px, -2px); } 75% { transform: translate(-2px, -2px); } 100% { transform: translate(2px, 2px); } }
+  @keyframes glitchFlicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.3; } }
+
+  /* === MAIN LAYOUT === */
+  #app { display: flex; height: calc(100vh - 56px); width: 100vw; position: relative; align-items: center; justify-content: center; margin-top: 28px; opacity: 0; transition: opacity 1s steps(5); z-index: 10; }
+  #app.visible { opacity: 1; }
+  #menu-panel { width: 100%; max-width: 320px; padding: 15px; transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1); z-index: 10; display: flex; flex-direction: column; gap: 6px; align-items: center; overflow-y: auto; max-height: calc(100vh - 80px); }
+  #app.is-open { justify-content: flex-start; }
+  #app.is-open #menu-panel { width: 18%; max-width: 240px; padding: 10px 6px 10px 15px; align-items: flex-end; transform: translateX(-5px); }
+
+  /* === BUTTONS === */
+  .btn-arrow { background: var(--bg); color: var(--fg); cursor: pointer; text-align: left; font-family: var(--font-pixel); font-size: 0.65rem; padding: 10px 15px; width: 100%; position: relative; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); border-radius: 0; box-shadow: inset 0 0 0 2px var(--fg); margin-bottom: 4px; }
+  .btn-arrow:last-of-type { margin-bottom: 0; }
+  .btn-arrow:hover { background: var(--fg); color: var(--bg); transform: translateX(5px); }
+  .btn-arrow:active { transform: scale(0.98); }
+  .btn-arrow.active { width: 108%; background: var(--fg); color: var(--bg); transform: translateX(10px); box-shadow: inset 0 0 0 2px var(--bg); z-index: 5; }
+  .btn-arrow.active:hover { transform: translateX(10px); }
+
+  .submenu-wrapper { width: 100%; display: flex; flex-direction: column; align-items: flex-end; max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 3px; }
+  .submenu-wrapper.open { max-height: 500px; }
+  .btn-small { background: var(--bg); color: var(--fg); cursor: pointer; text-align: center; font-family: var(--font-pixel); font-size: 0.5rem; padding: 6px 8px; width: 100%; margin-bottom: 3px; border-radius: 0; box-shadow: inset 0 0 0 1px var(--dim); transition: 0.2s; }
+  .btn-small:hover { background: var(--fg); color: var(--bg); }
+  .btn-small.active { background: var(--fg); color: var(--bg); box-shadow: inset 0 0 0 1px var(--bg); }
+
+  /* === CODE & CLOSE === */
+  .code-panel { width: 100%; background: var(--bg); border: 2px dashed var(--dim); display: none; flex-direction: column; gap: 8px; padding: 10px; margin-top: 4px; animation: slideIn 0.3s ease-out; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  .code-input { background: var(--bg); border: 2px solid var(--dim); color: var(--fg); font-family: var(--font-pixel); font-size: 0.5rem; padding: 8px; text-align: center; letter-spacing: 2px; text-transform: uppercase; }
+  .code-input:focus { border-color: var(--accent); }
+  .code-btn { background: var(--bg); color: var(--fg); border: 2px solid var(--fg); font-family: var(--font-pixel); font-size: 0.5rem; padding: 8px 12px; cursor: pointer; transition: all 0.2s; align-self: center; }
+  .code-btn:hover { background: var(--fg); color: var(--bg); }
+  .code-status { font-family: var(--font-mono); font-size: 0.6rem; color: var(--dim); text-align: center; min-height: 1.1em; transition: color 0.2s; }
+  .code-status.success { color: var(--accent); } .code-status.error { color: var(--warn); }
+  .close-btn { margin-top: 10px; background: var(--bg); color: var(--fg); cursor: pointer; text-align: center; font-family: var(--font-pixel); font-size: 0.6rem; padding: 10px 15px; width: 100%; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; letter-spacing: 1px; }
+  .close-btn:hover { background: var(--fg); color: var(--bg); }
+
+  /* === CONTENT WINDOW === */
+  #content-window { position: absolute; right: 5%; left: 22%; top: 5%; bottom: 5%; background: var(--bg); border: 3px solid var(--fg); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: scale(0.95); transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1); z-index: 20; box-shadow: 0 0 40px rgba(255,255,255,0.05); }
+  #app.is-open #content-window { opacity: 1; pointer-events: auto; transform: scale(1); }
+  .win-header { padding: 12px 20px; border-bottom: 3px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: var(--fg); color: var(--bg); font-family: var(--font-pixel); font-size: 0.7rem; }
+  .win-body { flex: 1; padding: 20px; overflow-y: auto; position: relative; display: flex; gap: 20px; }
+  .text-col { flex: 1.5; font-size: 0.85rem; line-height: 1.55; color: #CCC; }
+  .text-col h3 { font-family: var(--font-pixel); font-size: 0.55rem; margin: 10px 0 8px; border-bottom: 2px dashed var(--dim); padding-bottom: 4px; color: var(--fg); }
+  .text-col p { margin-bottom: 10px; }
+  .img-col { flex: 1; min-width: 220px; max-width: 300px; border: 2px solid var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; background: repeating-linear-gradient(45deg, #111, #111 5px, #222 5px, #222 10px); overflow: hidden; }
+  .img-col img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .img-placeholder { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--dim); text-align: center; padding: 20px; }
+
+  .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+  .footer-controls { display: flex; gap: 10px; }
+  .ctrl-btn { background: var(--bg); color: var(--fg); border: none; cursor: pointer; font-family: var(--font-pixel); font-size: 0.55rem; padding: 8px 12px; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; }
+  .ctrl-btn:hover { background: var(--fg); color: var(--bg); }
+  .nav-arrows { display: flex; gap: 8px; }
+  .nav-arrow { background: transparent; color: var(--fg); width: 40px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; }
+  .nav-arrow:hover { background: var(--fg); color: var(--bg); }
+
+  /* === 🎛️ AUDIO PLAYER UI === */
+  .audio-layout { display: flex; gap: 20px; width: 100%; height: 100%; align-items: center; justify-content: center; }
+  .tracklist { width: 30%; border-right: 2px solid var(--dim); padding-right: 15px; height: 90%; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+  .track-item { padding: 8px; background: var(--bg); border: 1px solid var(--dim); font-family: var(--font-mono); font-size: 0.7rem; cursor: pointer; transition: 0.2s; }
+  .track-item:hover { background: var(--dim); }
+  .track-item.active { background: var(--fg); color: var(--bg); }
+  .player-controls { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; }
+  .track-name { font-family: var(--font-pixel); font-size: 0.7rem; text-align: center; margin-bottom: 5px; min-height: 1.5em; }
+  .progress-bar { width: 80%; height: 6px; background: var(--dim); cursor: pointer; position: relative; border-radius: 3px; }
+  .progress-fill { height: 100%; background: var(--fg); width: 0%; transition: width 0.1s linear; border-radius: 3px; }
+  .time-display { display: flex; justify-content: space-between; width: 82%; font-size: 0.6rem; color: var(--dim); }
+  .play-btn { width: 50px; height: 50px; background: var(--bg); border: 2px solid var(--fg); color: var(--fg); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+  .play-btn:hover { background: var(--fg); color: var(--bg); }
+  .volume-slider-container { display: flex; align-items: center; gap: 8px; }
+  .vol-icon { font-size: 0.8rem; color: var(--dim); }
+  .vol-slider { writing-mode: bt-lr; -webkit-appearance: none; appearance: none; width: 6px; height: 60px; background: var(--dim); outline: none; border-radius: 3px; }
+  .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: var(--fg); border-radius: 2px; cursor: pointer; }
+
+  .loader-overlay { position: absolute; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 30; opacity: 1; transition: opacity 0.3s; }
+  .loader-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader-circle { width: 60px; height: 60px; position: relative; }
+  .loader-circle::before { content: ''; position: absolute; inset: 0; border: 4px solid var(--dim); border-radius: 50%; }
+  .loader-circle::after { content: ''; position: absolute; inset: 0; border: 4px solid transparent; border-top-color: var(--fg); border-radius: 50%; animation: loadSpin 3s ease-in-out infinite; }
+  @keyframes loadSpin { 0% { transform: rotate(0deg); } 30% { transform: rotate(180deg); } 50% { transform: rotate(180deg); } 80% { transform: rotate(-180deg); } 100% { transform: rotate(0deg); } }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--dim); } ::-webkit-scrollbar-thumb:hover { background: var(--fg); }
+  @media (max-width: 900px) {
+    #app { flex-direction: column; height: auto; margin-top: 56px; }
+    #menu-panel { width: 100%; max-width: 100%; padding: 15px; align-items: center; max-height: auto; }
+    #app.is-open #menu-panel { width: 100%; padding: 10px; transform: none; align-items: center; }
+    #content-window { position: relative; right: auto; left: auto; top: auto; bottom: auto; width: 95%; margin: 10px auto; height: 65vh; }
+    .win-body { flex-direction: column; } .img-col { max-width: 100%; min-width: auto; height: 200px; }
+    .btn-arrow { font-size: 0.6rem; padding: 10px 15px; } .marquee-bar { font-size: 0.55rem; padding: 5px 0; } .intro-side { display: none; } .win-toggle-btn { top: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="intro-screen">
+  <div class="intro-load-bar"><div class="intro-load-progress" id="intro-progress"></div></div>
+  <div class="intro-side left"><div>SYSTEM BOOT</div><div>SECURE MODE</div><div>V.9.4.1</div></div>
+  <div class="intro-side right"><div>ENCRYPTION: ON</div><div>STATUS: PENDING</div><div>MI-O NETWORK</div></div>
+  <div class="intro-loader-container" id="intro-loader"><div class="intro-circle"></div></div>
+  <div class="intro-processes" id="intro-processes">
+    <div class="process-line" style="--n:1">> LOADING CORE MODULES...</div><div class="process-line" style="--n:2">> INITIALIZING SECURITY PROTOCOLS...</div><div class="process-line" style="--n:3">> CONNECTING TO MI-O DATABASE...</div><div class="process-line" style="--n:4">> DECRYPTING USER DATA...</div><div class="process-line" style="--n:5">> ACCESS GRANTED</div>
+  </div>
+  <div class="intro-tabs" id="intro-tabs">
+    <div style="font-family: var(--font-pixel); font-size: 0.6rem; color: var(--dim); margin-bottom: 10px;">[ MODULES ]</div>
+    <div style="width: 150px; height: 30px; background: var(--bg); border: 2px solid var(--fg); margin: 5px 0;"></div><div style="width: 150px; height: 30px; background: var(--bg); border: 2px solid var(--fg); margin: 5px 0;"></div><div style="width: 150px; height: 30px; background: var(--bg); border: 2px solid var(--fg); margin: 5px 0;"></div>
+  </div>
+</div>
+
+<audio id="media-audio" preload="auto" loop crossorigin="anonymous"></audio>
+
+<button class="win-toggle-btn" id="win-toggle">❖</button>
+<div class="windows-watermark" id="win-watermark"><div class="watermark-title" style="font-weight:700;font-size:16px;margin-bottom:2px;letter-spacing:0.5px;">АКТИВАЦИЯ WINDOWS</div><div>Чтобы активировать Windows, перейдите в раздел "Параметры".</div></div>
+
+<div id="closing-screen-1" class="closing-overlay"><div class="closing-text">⚠ ОШИБКА ДОСТУПА ⚠<br>ПОВТОРИТЕ ПОПЫТКУ</div><div class="closing-subtext">СИСТЕМА ЗАЩИТЫ АКТИВИРОВАНА</div></div>
+<div id="closing-screen-2" class="closing-overlay"><div class="closing-text">ЗАКРЫТИЕ... ПОДОЖДИТЕ</div><div class="closing-loader"><div class="closing-loader-bar" id="closing-loader-bar"></div></div><div class="closing-subtext" id="closing-error-msg"></div></div>
+<div id="secret-overlay"><div class="secret-word">ХУЙ</div></div>
+
+<div class="marquee-bar top"><div class="marquee-content">/// SYSTEM TERMINAL v9.4.1 /// MILITOCRATIC EMPIRE OF UNITY /// SECURE CONNECTION ESTABLISHED /// DATA STREAM ACTIVE /// WARNING: UNAUTHORIZED ACCESS PROHIBITED /// FLKR-J MODEL DETECTED ///</div></div>
+<canvas id="matrix-bg"></canvas><div class="bg-grid"></div><div class="vignette"></div><div class="glow-effect"></div><canvas id="eq-bg"></canvas>
+
+<div id="app">
+  <div id="menu-panel">
+    <button class="btn-arrow" data-id="general" onclick="toggleSub('general')">ОБЩИЕ ДАННЫЕ</button>
+    <div style="width:100%; display:flex; flex-direction:column; align-items:flex-end;">
+      <button class="btn-arrow" data-id="char" onclick="toggleSub('char')">ХАРАКТЕРИСТИКА</button>
+      <div class="submenu-wrapper" id="sub-char">
+        <button class="btn-small" data-id="app" onclick="openWindow('app')">ВНЕШНОСТЬ</button>
+        <button class="btn-small" data-id="pers" onclick="openWindow('pers')">ХАРАКТЕР</button>
+        <button class="btn-small" data-id="bio" onclick="openWindow('bio')">БИОГРАФИЯ</button>
+      </div>
+    </div>
+    <div style="width:100%; display:flex; flex-direction:column; align-items:flex-end;">
+      <button class="btn-arrow" data-id="ab" onclick="toggleSub('ab')">СПОСОБНОСТИ</button>
+      <div class="submenu-wrapper" id="sub-ab">
+        <button class="btn-small" data-id="ab1" onclick="openWindow('ab1')">1. Clair de Lune</button>
+        <button class="btn-small" data-id="ab2" onclick="openWindow('ab2')">2. Munitions sur mesure</button>
+        <button class="btn-small" data-id="ab3" onclick="openWindow('ab3')">3. Rafale de plomb</button>
+        <button class="btn-small" data-id="ab4" onclick="openWindow('ab4')">4. Ombre silencieuse</button>
+        <button class="btn-small" data-id="ab5" onclick="openWindow('ab5')">5. Éclat aveuglant</button>
+        <button class="btn-small" data-id="ab6" onclick="openWindow('ab6')">6. Ombre totale</button>
+        <button class="btn-small" data-id="ab7" onclick="openWindow('ab7')">7. Œil de minuit</button>
+        <button class="btn-small" data-id="ab8" onclick="openWindow('ab8')">8. Murmure du réseau</button>
+        <button class="btn-small" data-id="ab9" onclick="openWindow('ab9')">9. Visage d’argile</button>
+        <button class="btn-small" data-id="ab10" onclick="openWindow('ab10')">10. Poche de nulle part</button>
+      </div>
+    </div>
+    <button class="btn-arrow" data-id="ned" onclick="openWindow('ned')">НЕДОСТАТКИ</button>
+    <button class="btn-arrow" data-id="base" onclick="openWindow('base')">БАЗА ПЕРСОНАЖА</button>
+
+    <button class="btn-arrow" id="codeToggle" onclick="toggleCodePanel()">ВВОД КОДА</button>
+    <div class="code-panel" id="codePanel">
+      <input type="text" class="code-input" id="secretCode" placeholder="КОД..." maxlength="20" autocomplete="off" spellcheck="false">
+      <button class="code-btn" id="activateCodeBtn">АКТИВИРОВАТЬ</button>
+      <div class="code-status" id="codeStatus">ОЖИДАНИЕ...</div>
+    </div>
+
+    <button class="btn-arrow" data-id="audio" onclick="openWindow('audio')" style="border-color: var(--accent);">АУДИО</button>
+    <button class="close-btn" onclick="closeFile()">[ ЗАКРЫТЬ ФАЙЛ ]</button>
+  </div>
+
+  <div id="content-window">
+    <div class="loader-overlay" id="loader"><div class="loader-circle"></div></div>
+    <div class="win-header"><span id="win-title">TITLE</span><span>SYS.LINKED</span></div>
+    <div class="win-body" id="win-body"></div>
+    <div class="win-footer">
+      <div class="footer-controls">
+        <button class="ctrl-btn" id="btn-edit" onclick="toggleEdit()">✎ РЕДАКТИРОВАТЬ</button>
+        <button class="ctrl-btn" id="btn-save" onclick="saveFile()">💾 СОХРАНИТЬ</button>
+      </div>
+      <div class="nav-arrows">
+        <button class="nav-arrow" onclick="navPage(-1)">◀</button>
+        <button class="nav-arrow" onclick="navPage(1)">▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="marquee-bar bottom"><div class="marquee-content" style="animation-direction: reverse;">/// CONNECTION STABLE /// PACKET LOSS: 0.00% /// ENCRYPTION: AES-256 /// TERMINAL ID: 774-X /// STATUS: OPERATIONAL /// AWAITING INPUT ///</div></div>
+
+<script>
+  window.addEventListener('load', () => {
+    const p = document.getElementById('intro-progress');
+    setTimeout(()=>p.style.width='20%',100); setTimeout(()=>p.style.width='40%',1500);
+    setTimeout(()=>p.style.width='60%',3000); setTimeout(()=>p.style.width='80%',4500);
+    setTimeout(()=>p.style.width='100%',5500);
+    setTimeout(()=>{
+      document.getElementById('intro-loader').classList.add('done');
+      document.getElementById('intro-processes').classList.add('done');
+      document.getElementById('intro-tabs').classList.add('done');
+      setTimeout(()=>{ document.getElementById('intro-screen').classList.add('hidden'); document.getElementById('app').classList.add('visible'); },1000);
+    },6000);
+  });
+
+  const winToggle = document.getElementById('win-toggle'), winWatermark = document.getElementById('win-watermark');
+  winToggle.addEventListener('click', () => { winWatermark.classList.toggle('visible'); winToggle.classList.toggle('active'); });
+
+  const canvas = document.getElementById('matrix-bg'), ctx = canvas.getContext('2d');
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+  const fontSize = 12; let columns = Math.floor(canvas.width / fontSize), drops = Array(columns).fill(1);
+  function drawMatrix() { ctx.fillStyle = 'rgba(5,5,5,0.08)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#FFF'; ctx.font=fontSize+'px monospace';
+    for(let i=0;i<drops.length;i++){ const t=chars[Math.floor(Math.random()*chars.length)]; ctx.fillText(t,i*fontSize,drops[i]*fontSize); if(drops[i]*fontSize>canvas.height && Math.random()>0.975) drops[i]=0; drops[i]++; } }
+  setInterval(drawMatrix,40); window.addEventListener('resize',()=>{ columns=Math.floor(canvas.width/fontSize); drops=Array(columns).fill(1); });
+
+  const sections = ['general','app','pers','bio','ab1','ab2','ab3','ab4','ab5','ab6','ab7','ab8','ab9','ab10','ned','base'];
+  let currentSection = null, currentIdx = 0, isEditing = false, closeAttempts = 0, isPlaying = false;
+
+  const data = {
+    general: { title:"ОБЩИЕ ДАННЫЕ", text:`<h3>ОСНОВНЫЕ СВЕДЕНИЯ</h3><p><b>Имя | Фамилия:</b> Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд)<br><b>Прозвище:</b> «Курьер 6»<br><b>Раса:</b> Человек<br><b>Возраст:</b> 23 года<br><b>Под деятельности:</b> наемник</p>`, img:"all" },
+    app: { title:"ВНЕШНОСТЬ", text:`<p>Мари - высокая девушка, ростом чуть ниже 190 сантиметров и слегка атлетическим телосложением. Суперспортсменкой, способной одной рукой тягать штанги её конечно не назовешь, но тело её гибкое и податливое, что позволяет ему как-угодно выгинаться и куда-угодно пролезать. Девушка имеет недлинные серый волосы пепельного оттенка и золотистые глаза, на свету переливающиеся серым. Мари имеет длинные ноги с широкими бедрами, при узкой тазовой кости, что лишь помогает в том, чтобы пролезать туда, куда, казалось бы, она пролезать не должна. Предпочитает деловитый стиль одежды для работы и вполне открытый уличный для дома и прогулок.</p>`, img:"app" },
+    pers: { title:"ХАРАКТЕР", text:`<p>Характер Мари достаточно прост для объяснения, она научилась абстрагироваться от работы в мирное время и от мирной жизни на работе, полностью разделяя эти понятия и цели от своей личной жизни. Примерно по этой причине она может весело проводить время в клубе, а через минуту уже нажимать на детонатор в этом же самом клубе. В мирное время она веселая, не слишком сдержанная девушка с личными амбициями и активным образом жизни, на работе же холодный профессионал, безэмоционально оружие, убийцы.</p>`, img:"char" },
+    bio: { title:"БИОГРАФИЯ", text:`<p>Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд) родилась в жилом районе блокпоста №13 в достаточно зажиточной семьи. Её родители работали в МИО, мать работала в бухгалтерии органов МИО, а отец был военнослужащим. Несмотря на подобное воспитание и вполне завершение школы с отличием - у Мари не выработалось практически никакого патриотизма к МИО. В 12 лет она ввязалась в не самую лучшую маргинальную компанию, многие члены которой в будущем стали членами банд серого района, членами Кракена, лишь малая часть устроилась на приличные работы. С 14 лет Мари и её окружение начали проворачивать сомнительные схемы, подстраивать несчастные случаи с их участием, чтобы получить с них денег, подворовывать и другое, а в 16 лет Мари прибилась к одной из банд Серого района как курьер под номером 6. В 17 лет она впервые убила человека, застрелив того при самообороне я а с 19 начала промышлять подобными убийствами на заказ. От банды она отвязалась в 22, сейчас работает как частное лицо, не закреплённое за определенной ситуацией. Выполняла задания и для МИО.</p>`, img:"bio" },
+    ned: { title:"НЕДОСТАТКИ", text:`<p><b>Плохой пример.</b> Не может получать репутацию корпораций.<br><b>Смутная репутация.</b> Не имеет друзей даже в приступом мире. Не получает плюсы от хорошей и плохой репутации, за исключением статусов.</p>`, img:"ned" },
+    base: { title:"БАЗА ПЕРСОНАЖА", text:`<h3>Особенности расы:</h3><p>Любой полноценный человек, чистый генетически, обладает высоким социальным статусом. МИО всюду твердит о господстве человечества из-за чего люди зачастую предвзяты к другим не людям, наверное кроме личей. Люди - главные ксенофобы.<br>Для установки имплантов, людям необходимо обратиться в спец. учреждения или к частному медику для проведения вживления.<br><b>*Человек получает в 1.5 раза больше опыта и денег с квестов</b></p><h3>Навыки:</h3><p>• Стрельба из одноручного орудия на армейском уровне<br>• Навык взлома замков на уровне опытного медвежатника<br>• Возможность тихонько перемещаться<br>• Способность стрелять по македонски<br>• Базовые знания анатомии</p>`, img:null },
+    ab1: { title:"1. Clair de Lune", text:`<p>Clair de Lune - название уникального пистолета Мари сделанного для нее на заказ неизвестным оружейником, обосновавшимся в подземельях Руин Старого Города. Пистолет выглядит как глубокая модификация старого пистолета калибра .45 ACP с увеличенной рамой и затвором, магазином на 8 патронов и съемным глушителем на стволе. Сам по себе пистолет бесполезен и даже не может стрелять, однако пистолет имеет ряд уникальных свойств, заметно увеличивающих его эффективность. Для начала пистолет имеет способность перенимать свойства любого оружия в инвентаре, стреляющего патронами. Он перенимает КП, особенности и другое, оставляя за собой лишь дальность стрельбы в 75 метров, скорострельность 70 ВВМ и боезапас на 8 патронов. Смена выбранного оружия происходит за 1 действие, не чаще чем раз в 10 постов. Про потере или поломке пистолета можно восстановить у любого оружейника за 9К кредитов материалов.</p>`, img:"ab1" },
+    ab2: { title:"2. Munitions sur mesure", text:`<p>При желании Мари может создать до двух магазинов на квест различных патронов. Патроны в одном магазине обязаны быть одного типа без изменения. Можно создать патроны следующих типов.<br>Отравляющий - увеличивают время регенерации вдвое.<br>ЭМИ - снижают класс пробития на 2, при том наносят ЭМИ 3 уровня, глуша электронику до 2 постов.<br>Некротические - вызывают гниение ткани, уменьшая характеристики органических конечностей, в которые попадает на ×2.<br>Бронебойные - увеличивают КП на 1.<br>КД между сравним патронов - 4 поста. Максимум за квест - 2 магазина.</p>`, img:"ab2" },
+    ab3: { title:"3. Rafale de plomb", text:`<p>Видоизменяет пистолет, увеличивая раму, увеличивая магазин и уменьшая ход ствола. Пистолет увеличивает скоростей до 1100 ВВМ, магазин до 20 патронов и даёт ему автоматический режим огня. Не может быть бесшумным, даже при стороннем воздействие ПСИ. КД между стеной режимов - 5 постов.</p>`, img:"ab3" },
+    ab4: { title:"4. Ombre silencieuse", text:`<p>Базовый режим пистолета. Пистолет обладает оглашенными в первой способности характеристиками, при том имеет абсолютно бесзвучную стрельбу. Может раз в 10 постов сделать один выстрел на +2 класса пробития, суммируется с бронебойными патронами.</p>`, img:"ab4" },
+    ab5: { title:"5. Éclat aveuglant", text:`<p>Создаёт магазин светошумовые патронов, при столкновении с препятствием создают вспышку и хлопок, оглушающий и ослепляющие всех, кто был в радиусе 5 метров, если цель не имела защиты. ВД ослепления - 2 поста, ВД оглушения - 3 поста, макс. магазинов за квест - 2, КД между созданием - 4 поста.</p>`, img:"ab5" },
+    ab6: { title:"6. Ombre totale", text:`<p>По щелчку пальцев гасит все источники света в радиусе 40 метров. Если источник света погасить невозможно (окна, солнце), создаёт сферу радиусом 15 метров, куда полностью не проходит свет. ВД - 4 поста, КД - 6 постов.</p>`, img:"ab6" },
+    ab7: { title:"7. Œil de minuit", text:`<p>Мари имеет защищённое зрение. Оно позволяет ей видеть даже без источников света, а так же защищает её от ярких вспышек. Кошачье зрение, хуже мое, только в полной темноте тоже видит. Пассивно.</p>`, img:"ab7" },
+    ab8: { title:"8. Murmure du réseau", text:`<p>Мари имеет ряд информаторов по всему МИО. Дважды за квест она может узнать информацию о местоположение объекта, информацию о нем, о его слабостях или ещё какие-то вопросы. Ответ приходит через два поста с полным ответом на вопрос.</p>`, img:"ab8" },
+    ab9: { title:"9. Visage d’argile", text:`<p>При желании Мари может сменить свое лицо на любое другое, но не может изменить тело, телосложение, силуэт и др. Пассивно. Лицо меняется не чаще чем с промежутком в 4 поста.</p>`, img:"ab9" },
+    ab10: { title:"10. Poche de nulle part", text:`<p>Мари имеет пространственный карман, куда можно засунуть не более 3 предметов инвентаря, комплекты брони, станки оружия идут единым комплектом и считаются за один предмет. Пассивно.</p>`, img:"ab10" }
+  };
+
+  function toggleSub(group) {
+    const sub = document.getElementById('sub-' + group);
+    sub.classList.toggle('open');
+    document.querySelector(`[data-id="${group}"]`).classList.toggle('active');
+    if(sub.classList.contains('open') && group === 'char') openWindow('app');
+    if(sub.classList.contains('open') && group === 'ab') openWindow('ab1');
+  }
+
+  function openWindow(id) {
+    if(id === 'audio') { renderAudioUI(); return; }
+    currentSection = id; currentIdx = sections.indexOf(id);
+    document.getElementById('app').classList.add('is-open');
+    updateUI(id);
+    const loader = document.getElementById('loader'); loader.classList.remove('hidden');
+    document.getElementById('win-title').textContent = data[id].title;
+    
+    let html = `<div class="text-col">${data[id].text}</div>`;
+    if(data[id].img) {
+      html += `<div class="img-col" id="img-slot"><div class="img-placeholder">[ ${data[id].img.toUpperCase()}.PNG ]</div></div>`;
+    }
+    document.getElementById('win-body').innerHTML = html;
+    setTimeout(() => loader.classList.add('hidden'), 300);
+  }
+
+  function updateUI(id) {
+    document.querySelectorAll('.btn-arrow, .btn-small').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`[data-id="${id}"]`);
+    if(btn) btn.classList.add('active');
+  }
+
+  function toggleCodePanel() {
+    const p = document.getElementById('codePanel');
+    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+  }
+
+  function closeFile() {
+    closeAttempts++;
+    if(closeAttempts===1) { document.getElementById('closing-screen-1').classList.add('active'); setTimeout(()=>document.getElementById('closing-screen-1').classList.remove('active'),2500); }
+    else if(closeAttempts===2) { const s2=document.getElementById('closing-screen-2'), lb=document.getElementById('closing-loader-bar'), em=document.getElementById('closing-error-msg'); s2.classList.add('active'); setTimeout(()=>lb.style.width='100%',100); setTimeout(()=>{ window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1','_blank'); em.textContent='⚠ ОШИБКА ⚠'; em.style.color='var(--warn)'; },2000); setTimeout(()=>{s2.classList.remove('active');lb.style.width='0%';em.textContent='';},4500); }
+    else { const cs=document.createElement('div'); cs.className='closing-overlay active'; cs.innerHTML='<div class="closing-text">■ СИСТЕМА ЗАКРЫТА ■</div><div class="closing-subtext">ТЕРМИНАЛ ОТКЛЮЧАЕТСЯ...</div>'; document.body.appendChild(cs); setTimeout(()=>{window.close(); setTimeout(()=>{cs.innerHTML='<div class="closing-text">■ СИСТЕМА ЗАКРЫТА ■</div><div class="closing-subtext">МОЖЕТЕ ЗАКРЫТЬ ВКЛАДКУ ВРУЧНУЮ</div><div style="margin-top:30px;font-size:0.6rem;color:#555;">[ИЛИ ОБНОВИТЕ СТРАНИЦУ ДЛЯ ПЕРЕЗАПУСКА]</div>';},1000);},2000); }
+  }
+
+  window.navPage = function(dir) { currentIdx+=dir; if(currentIdx<0) currentIdx=sections.length-1; if(currentIdx>=sections.length) currentIdx=0; openWindow(sections[currentIdx]); };
+  function toggleEdit() { isEditing=!isEditing; const b=document.getElementById('btn-edit'); b.textContent=isEditing?'✎ ЗАВЕРШИТЬ':'✎ РЕДАКТИРОВАТЬ'; document.getElementById('win-text').contentEditable=isEditing; }
+  function saveFile() { const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='TERMINAL_BACKUP.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+
+  // 🔐 CODE SYSTEM
+  const codeInput = document.getElementById('secretCode'), activateBtn = document.getElementById('activateCodeBtn'), codeStatus = document.getElementById('codeStatus'), secretOverlay = document.getElementById('secret-overlay');
+  const SECRETS = { 
+    '7821': () => { codeStatus.textContent='✓ КОД ПРИНЯТ'; codeStatus.className='code-status success'; secretOverlay.classList.add('active'); setTimeout(()=>secretOverlay.classList.remove('active'),3000); },
+    '2243': () => { codeStatus.textContent='✓ АУДИО МОДУЛЬ РАЗБЛОКИРОВАН'; codeStatus.className='code-status success'; openWindow('audio'); }
+  };
+  function processCode() { const raw=codeInput.value.trim().toUpperCase(); codeStatus.className='code-status'; if(!raw){codeStatus.textContent='⚠ ПУСТО'; codeStatus.className='code-status error'; return;} codeStatus.textContent='ПРОВЕРКА...'; if(SECRETS[raw]){SECRETS[raw](); codeInput.value='';} else { codeStatus.textContent='✗ НЕ НАЙДЕН'; codeStatus.className='code-status error'; } }
+  activateBtn.addEventListener('click', processCode); codeInput.addEventListener('keypress', e=>{if(e.key==='Enter')processCode();});
+
+  // 🎛️ AUDIO PLAYER (PERSISTENT & CUSTOM UI)
+  const testAudio = document.getElementById('media-audio');
+  let audioCtx, analyser, source, isEqInitialized = false;
+  let tracks = [{ name: "test1.mp3", src: "test1.mp3", dur: 0 }];
+  let currentTrack = 0;
+  let progressInterval;
+  testAudio.volume = 0.8;
+
+  const eqCanvas = document.getElementById('eq-bg'), eqCtx = eqCanvas.getContext('2d');
+  function resizeEq() { eqCanvas.width=window.innerWidth; eqCanvas.height=window.innerHeight; } resizeEq(); window.addEventListener('resize', resizeEq);
+  async function initEq() { if(isEqInitialized) return; try { audioCtx=new(window.AudioContext||window.webkitAudioContext)(); analyser=audioCtx.createAnalyser(); analyser.fftSize=128; source=audioCtx.createMediaElementSource(testAudio); source.connect(analyser); analyser.connect(audioCtx.destination); isEqInitialized=true; } catch(e){} }
+  function drawEq() { requestAnimationFrame(drawEq); if(!analyser||!isPlaying){eqCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height); return;} const bl=analyser.frequencyBinCount; const da=new Uint8Array(bl); analyser.getByteFrequencyData(da); eqCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height); const bw=(eqCanvas.width/bl)*2.5; let x=0; for(let i=0;i<bl;i++){ const h=(da[i]/255)*(eqCanvas.height*0.7); eqCtx.fillStyle=`rgba(255,255,255,${0.35+(da[i]/255)*0.65})`; eqCtx.fillRect(x, eqCanvas.height-h, bw-2, h); x+=bw; } } drawEq();
+
+  function renderAudioUI() {
+    document.getElementById('app').classList.add('is-open');
+    updateUI('audio');
+    const loader = document.getElementById('loader'); loader.classList.remove('hidden');
+    document.getElementById('win-title').textContent = 'АУДИО МОДУЛЬ';
+    document.getElementById('win-body').innerHTML = `
+      <div class="audio-layout">
+        <div class="tracklist" id="tracklist"></div>
+        <div class="player-controls">
+          <div class="track-name" id="track-name">${tracks[0].name}</div>
+          <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+          <div class="progress-bar" id="prog-bar" onclick="seek(event)"><div class="progress-fill" id="prog-fill"></div></div>
+          <div class="time-display"><span id="cur-time">00:00</span><span id="tot-time">00:00</span></div>
+          <div class="volume-slider-container"><span class="vol-icon">VOL</span><input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" oninput="testAudio.volume=this.value"></div>
+          <div class="nav-arrows">
+            <button class="nav-arrow" onclick="changeTrack(-1)">◀</button>
+            <button class="nav-arrow" onclick="changeTrack(1)">▶</button>
+          </div>
+        </div>
+      </div>`;
+    renderTracklist();
+    setTimeout(() => loader.classList.add('hidden'), 200);
+    clearInterval(progressInterval);
+    updateProgressUI();
+  }
+
+  function renderTracklist() {
+    const tl = document.getElementById('tracklist');
+    if(!tl) return;
+    tl.innerHTML = tracks.map((t,i) => `<div class="track-item ${i===currentTrack?'active':''}" onclick="selectTrack(${i})">${t.name}</div>`).join('');
+  }
+
+  window.selectTrack = (idx) => { currentTrack = idx; loadTrack(); };
+  window.changeTrack = (dir) => { currentTrack = (currentTrack + dir + tracks.length) % tracks.length; loadTrack(); };
+  function loadTrack() {
+    testAudio.src = tracks[currentTrack].src;
+    testAudio.load();
+    if(isPlaying) testAudio.play();
+    renderTracklist();
+    document.getElementById('track-name').textContent = tracks[currentTrack].name;
+  }
+
+  window.togglePlay = async () => {
+    await initEq();
+    if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+    if(isPlaying) { testAudio.pause(); isPlaying = false; document.getElementById('play-btn').textContent = '▶'; }
+    else { testAudio.play(); isPlaying = true; document.getElementById('play-btn').textContent = '⏸'; updateProgressUI(); }
+  };
+
+  function updateProgressUI() {
+    clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+      if(!testAudio.src) return;
+      const cur = testAudio.currentTime || 0;
+      const dur = testAudio.duration || 0;
+      const pct = (cur/dur)*100;
+      document.getElementById('prog-fill').style.width = pct + '%';
+      document.getElementById('cur-time').textContent = fmtTime(cur);
+      document.getElementById('tot-time').textContent = fmtTime(dur);
+    }, 100);
+  }
+
+  window.seek = (e) => { if(!testAudio.duration) return; const rect=e.target.getBoundingClientRect(); const pct=(e.clientX-rect.left)/rect.width; testAudio.currentTime = pct * testAudio.duration; };
+  function fmtTime(s) { if(isNaN(s)) return '00:00'; const m=Math.floor(s/60), sec=Math.floor(s%60); return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
+</script>
+</body>
+</html>
