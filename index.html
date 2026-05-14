@@ -97,10 +97,14 @@
   .close-btn { margin-top: 10px; background: var(--bg); color: var(--fg); cursor: pointer; text-align: center; font-family: var(--font-pixel); font-size: 0.6rem; padding: 10px 15px; width: 100%; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; letter-spacing: 1px; }
   .close-btn:hover { background: var(--fg); color: var(--bg); }
 
-  /* === CONTENT WINDOW === */
-  #content-window { position: absolute; right: 5%; left: 22%; top: 5%; bottom: 5%; background: var(--bg); border: 3px solid var(--fg); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: scale(0.95); transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1); z-index: 20; box-shadow: 0 0 40px rgba(255,255,255,0.05); }
+  /* === CONTENT WINDOW (GRAY + RIGHT GRADIENT) === */
+  #content-window { position: absolute; right: 5%; left: 22%; top: 5%; bottom: 5%; 
+    background: linear-gradient(90deg, #050505 0%, #050505 55%, #121218 100%); 
+    border: 3px solid var(--fg); display: flex; flex-direction: column; 
+    opacity: 0; pointer-events: none; transform: scale(0.95); transition: opacity 0.5s, transform 0.5s; 
+    z-index: 20; box-shadow: 0 0 40px rgba(255,255,255,0.05); }
   #app.is-open #content-window { opacity: 1; pointer-events: auto; transform: scale(1); }
-  .win-header { padding: 12px 20px; border-bottom: 3px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: var(--fg); color: var(--bg); font-family: var(--font-pixel); font-size: 0.7rem; }
+  .win-header { padding: 12px 20px; border-bottom: 3px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); color: var(--fg); font-family: var(--font-pixel); font-size: 0.7rem; transition: background 0.4s, border-color 0.4s; }
   .win-body { flex: 1; padding: 20px; overflow-y: auto; position: relative; display: flex; gap: 20px; }
   .text-col { flex: 1.5; font-size: 0.85rem; line-height: 1.55; color: #CCC; }
   .text-col h3 { font-family: var(--font-pixel); font-size: 0.55rem; margin: 10px 0 8px; border-bottom: 2px dashed var(--dim); padding-bottom: 4px; color: var(--fg); }
@@ -109,7 +113,7 @@
   .img-col img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .img-placeholder { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--dim); text-align: center; padding: 20px; }
 
-  .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+  .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); transition: background 0.4s, border-color 0.4s; }
   .footer-controls { display: flex; gap: 10px; }
   .ctrl-btn { background: var(--bg); color: var(--fg); border: none; cursor: pointer; font-family: var(--font-pixel); font-size: 0.55rem; padding: 8px 12px; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; }
   .ctrl-btn:hover { background: var(--fg); color: var(--bg); }
@@ -267,6 +271,7 @@
   const sections = ['general','app','pers','bio','ab1','ab2','ab3','ab4','ab5','ab6','ab7','ab8','ab9','ab10','ned','base'];
   let currentSection = null, currentIdx = 0, isEditing = false, closeAttempts = 0, isPlaying = false;
 
+  // === 🗂️ DATA ===
   const data = {
     general: { title:"ОБЩИЕ ДАННЫЕ", text:`<h3>ОСНОВНЫЕ СВЕДЕНИЯ</h3><p><b>Имя | Фамилия:</b> Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд)<br><b>Прозвище:</b> «Курьер 6»<br><b>Раса:</b> Человек<br><b>Возраст:</b> 23 года<br><b>Под деятельности:</b> наемник</p>`, img:"all" },
     app: { title:"ВНЕШНОСТЬ", text:`<p>Мари - высокая девушка, ростом чуть ниже 190 сантиметров и слегка атлетическим телосложением. Суперспортсменкой, способной одной рукой тягать штанги её конечно не назовешь, но тело её гибкое и податливое, что позволяет ему как-угодно выгинаться и куда-угодно пролезать. Девушка имеет недлинные серый волосы пепельного оттенка и золотистые глаза, на свету переливающиеся серым. Мари имеет длинные ноги с широкими бедрами, при узкой тазовой кости, что лишь помогает в том, чтобы пролезать туда, куда, казалось бы, она пролезать не должна. Предпочитает деловитый стиль одежды для работы и вполне открытый уличный для дома и прогулок.</p>`, img:"app" },
@@ -341,12 +346,25 @@
   function processCode() { const raw=codeInput.value.trim().toUpperCase(); codeStatus.className='code-status'; if(!raw){codeStatus.textContent='⚠ ПУСТО'; codeStatus.className='code-status error'; return;} codeStatus.textContent='ПРОВЕРКА...'; if(SECRETS[raw]){SECRETS[raw](); codeInput.value='';} else { codeStatus.textContent='✗ НЕ НАЙДЕН'; codeStatus.className='code-status error'; } }
   activateBtn.addEventListener('click', processCode); codeInput.addEventListener('keypress', e=>{if(e.key==='Enter')processCode();});
 
-  // 🎛️ AUDIO PLAYER & EQ (FIXED)
+  // 🎛️ AUDIO PLAYER & EQ
   const testAudio = document.getElementById('media-audio');
   testAudio.volume = 0.8;
   let audioCtx, analyser, source, isEqInitialized = false;
-  let tracks = [{ name: "test1.mp3", src: "test1.mp3" }];
-  let currentTrack = 0;
+  // Структура: { src: "файл", name: "Отображаемое имя" }
+  let tracks = [
+    { src: "fallout1.mp3", name: "Rangers" },
+    { src: "fallout2.mp3", name: "Republic" },
+    { src: "olen.mp3", name: "Олений пенис" },
+    { src: "test1.mp3", name: "Легенда" },
+    { src: "john.mp3", name: "A Long Way Down" }, // По умолчанию
+    { src: "gachi1.mp3", name: "Чёрные глаза" },
+    { src: "gachi2.mp3", name: "Мальчик на девятке" },
+    { src: "kiss.mp3", name: "Kiss Me Again" },
+    { src: "under.mp3", name: "No More Deals" },
+    { src: "gas.mp3", name: "GAS GAS GAS" },
+    { src: "reeeg.mp3", name: "Режим" }
+  ];
+  let currentTrack = 4; // john.mp3 по умолчанию
   let progressInterval;
 
   const eqCanvas = document.getElementById('eq-bg'), eqCtx = eqCanvas.getContext('2d');
@@ -385,7 +403,7 @@
       <div class="audio-layout">
         <div class="tracklist" id="tracklist"></div>
         <div class="player-controls">
-          <div class="track-name" id="track-name">${tracks[0].name}</div>
+          <div class="track-name" id="track-name">${tracks[currentTrack].name}</div>
           <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
           <div class="progress-bar" id="prog-bar" onclick="seek(event)"><div class="progress-fill" id="prog-fill"></div></div>
           <div class="time-display"><span id="cur-time">00:00</span><span id="tot-time">00:00</span></div>
@@ -405,6 +423,7 @@
   function renderTracklist() {
     const tl = document.getElementById('tracklist');
     if(!tl) return;
+    // Используем tracks[i].name для отображения
     tl.innerHTML = tracks.map((t,i) => `<div class="track-item ${i===currentTrack?'active':''}" onclick="selectTrack(${i})">${t.name}</div>`).join('');
   }
 
@@ -422,7 +441,7 @@
 
   window.togglePlay = async () => {
     await initEq();
-    if(audioCtx.state === 'suspended') await audioCtx.resume();
+    if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
     const btn = document.getElementById('play-btn');
     if(isPlaying) {
       testAudio.pause();
