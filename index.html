@@ -97,23 +97,28 @@
   .close-btn { margin-top: 10px; background: var(--bg); color: var(--fg); cursor: pointer; text-align: center; font-family: var(--font-pixel); font-size: 0.6rem; padding: 10px 15px; width: 100%; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; letter-spacing: 1px; }
   .close-btn:hover { background: var(--fg); color: var(--bg); }
 
-  /* === CONTENT WINDOW (GRAY + RIGHT GRADIENT) === */
+  /* === CONTENT WINDOW (DYNAMIC THEMING) === */
   #content-window { position: absolute; right: 5%; left: 22%; top: 5%; bottom: 5%; 
-    background: linear-gradient(90deg, #050505 0%, #050505 55%, #121218 100%); 
-    border: 3px solid var(--fg); display: flex; flex-direction: column; 
-    opacity: 0; pointer-events: none; transform: scale(0.95); transition: opacity 0.5s, transform 0.5s; 
-    z-index: 20; box-shadow: 0 0 40px rgba(255,255,255,0.05); }
+    /* Фон и рамка управляются через JS */
+    background-color: #050505;
+    border: 3px solid #FFFFFF;
+    box-shadow: 0 0 40px rgba(255,255,255,0.05);
+    display: flex; flex-direction: column; 
+    opacity: 0; pointer-events: none; transform: scale(0.95); transition: opacity 0.5s, transform 0.5s, background-color 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease; 
+    z-index: 20; }
   #app.is-open #content-window { opacity: 1; pointer-events: auto; transform: scale(1); }
-  .win-header { padding: 12px 20px; border-bottom: 3px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); color: var(--fg); font-family: var(--font-pixel); font-size: 0.7rem; transition: background 0.4s, border-color 0.4s; }
+  
+  .win-header { padding: 12px 20px; border-bottom: 3px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); color: var(--fg); font-family: var(--font-pixel); font-size: 0.7rem; }
   .win-body { flex: 1; padding: 20px; overflow-y: auto; position: relative; display: flex; gap: 20px; }
-  .text-col { flex: 1.5; font-size: 0.85rem; line-height: 1.55; color: #CCC; }
+  .text-col { flex: 1.5; font-size: 0.85rem; line-height: 1.55; color: #CCC; outline: none; }
   .text-col h3 { font-family: var(--font-pixel); font-size: 0.55rem; margin: 10px 0 8px; border-bottom: 2px dashed var(--dim); padding-bottom: 4px; color: var(--fg); }
   .text-col p { margin-bottom: 10px; }
-  .img-col { flex: 1; min-width: 220px; max-width: 300px; border: 2px solid var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; background: repeating-linear-gradient(45deg, #111, #111 5px, #222 5px, #222 10px); overflow: hidden; }
+  
+  .img-col { flex: 1; min-width: 220px; max-width: 300px; border: 2px solid var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #050505; overflow: hidden; }
   .img-col img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .img-placeholder { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--dim); text-align: center; padding: 20px; }
 
-  .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); transition: background 0.4s, border-color 0.4s; }
+  .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
   .footer-controls { display: flex; gap: 10px; }
   .ctrl-btn { background: var(--bg); color: var(--fg); border: none; cursor: pointer; font-family: var(--font-pixel); font-size: 0.55rem; padding: 8px 12px; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; }
   .ctrl-btn:hover { background: var(--fg); color: var(--bg); }
@@ -205,7 +210,7 @@
         <button class="btn-small" data-id="ab6" onclick="openWindow('ab6')">6. Ombre totale</button>
         <button class="btn-small" data-id="ab7" onclick="openWindow('ab7')">7. Œil de minuit</button>
         <button class="btn-small" data-id="ab8" onclick="openWindow('ab8')">8. Murmure du réseau</button>
-        <button class="btn-small" data-id="ab9" onclick="openWindow('ab9')">9. Visage d’argile</button>
+        <button class="btn-small" data-id="ab9" onclick="openWindow('ab9')">9. Visage d'argile</button>
         <button class="btn-small" data-id="ab10" onclick="openWindow('ab10')">10. Poche de nulle part</button>
       </div>
     </div>
@@ -271,24 +276,25 @@
   const sections = ['general','app','pers','bio','ab1','ab2','ab3','ab4','ab5','ab6','ab7','ab8','ab9','ab10','ned','base'];
   let currentSection = null, currentIdx = 0, isEditing = false, closeAttempts = 0, isPlaying = false;
 
-  // === 🗂️ DATA ===
+  // === 🗂️ DATA WITH THEMES ===
   const data = {
-    general: { title:"ОБЩИЕ ДАННЫЕ", text:`<h3>ОСНОВНЫЕ СВЕДЕНИЯ</h3><p><b>Имя | Фамилия:</b> Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд)<br><b>Прозвище:</b> «Курьер 6»<br><b>Раса:</b> Человек<br><b>Возраст:</b> 23 года<br><b>Под деятельности:</b> наемник</p>`, img:"all" },
-    app: { title:"ВНЕШНОСТЬ", text:`<p>Мари - высокая девушка, ростом чуть ниже 190 сантиметров и слегка атлетическим телосложением. Суперспортсменкой, способной одной рукой тягать штанги её конечно не назовешь, но тело её гибкое и податливое, что позволяет ему как-угодно выгинаться и куда-угодно пролезать. Девушка имеет недлинные серый волосы пепельного оттенка и золотистые глаза, на свету переливающиеся серым. Мари имеет длинные ноги с широкими бедрами, при узкой тазовой кости, что лишь помогает в том, чтобы пролезать туда, куда, казалось бы, она пролезать не должна. Предпочитает деловитый стиль одежды для работы и вполне открытый уличный для дома и прогулок.</p>`, img:"app" },
-    pers: { title:"ХАРАКТЕР", text:`<p>Характер Мари достаточно прост для объяснения, она научилась абстрагироваться от работы в мирное время и от мирной жизни на работе, полностью разделяя эти понятия и цели от своей личной жизни. Примерно по этой причине она может весело проводить время в клубе, а через минуту уже нажимать на детонатор в этом же самом клубе. В мирное время она веселая, не слишком сдержанная девушка с личными амбициями и активным образом жизни, на работе же холодный профессионал, безэмоционально оружие, убийцы.</p>`, img:"char" },
-    bio: { title:"БИОГРАФИЯ", text:`<p>Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд) родилась в жилом районе блокпоста №13 в достаточно зажиточной семьи. Её родители работали в МИО, мать работала в бухгалтерии органов МИО, а отец был военнослужащим. Несмотря на подобное воспитание и вполне завершение школы с отличием - у Мари не выработалось практически никакого патриотизма к МИО. В 12 лет она ввязалась в не самую лучшую маргинальную компанию, многие члены которой в будущем стали членами банд серого района, членами Кракена, лишь малая часть устроилась на приличные работы. С 14 лет Мари и её окружение начали проворачивать сомнительные схемы, подстраивать несчастные случаи с их участием, чтобы получить с них денег, подворовывать и другое, а в 16 лет Мари прибилась к одной из банд Серого района как курьер под номером 6. В 17 лет она впервые убила человека, застрелив того при самообороне я а с 19 начала промышлять подобными убийствами на заказ. От банды она отвязалась в 22, сейчас работает как частное лицо, не закреплённое за определенной ситуацией. Выполняла задания и для МИО.</p>`, img:"bio" },
-    ned: { title:"НЕДОСТАТКИ", text:`<p><b>Плохой пример.</b> Не может получать репутацию корпораций.<br><b>Смутная репутация.</b> Не имеет друзей даже в приступом мире. Не получает плюсы от хорошей и плохой репутации, за исключением статусов.</p>`, img:"ned" },
-    base: { title:"БАЗА ПЕРСОНАЖА", text:`<h3>Особенности расы:</h3><p>Любой полноценный человек, чистый генетически, обладает высоким социальным статусом. МИО всюду твердит о господстве человечества из-за чего люди зачастую предвзяты к другим не людям, наверное кроме личей. Люди - главные ксенофобы.<br>Для установки имплантов, людям необходимо обратиться в спец. учреждения или к частному медику для проведения вживления.<br><b>*Человек получает в 1.5 раза больше опыта и денег с квестов</b></p><h3>Навыки:</h3><p>• Стрельба из одноручного орудия на армейском уровне<br>• Навык взлома замков на уровне опытного медвежатника<br>• Возможность тихонько перемещаться<br>• Способность стрелять по македонски<br>• Базовые знания анатомии</p>`, img:null },
-    ab1: { title:"1. Clair de Lune", text:`<p>Clair de Lune - название уникального пистолета Мари сделанного для нее на заказ неизвестным оружейником, обосновавшимся в подземельях Руин Старого Города. Пистолет выглядит как глубокая модификация старого пистолета калибра .45 ACP с увеличенной рамой и затвором, магазином на 8 патронов и съемным глушителем на стволе. Сам по себе пистолет бесполезен и даже не может стрелять, однако пистолет имеет ряд уникальных свойств, заметно увеличивающих его эффективность. Для начала пистолет имеет способность перенимать свойства любого оружия в инвентаре, стреляющего патронами. Он перенимает КП, особенности и другое, оставляя за собой лишь дальность стрельбы в 75 метров, скорострельность 70 ВВМ и боезапас на 8 патронов. Смена выбранного оружия происходит за 1 действие, не чаще чем раз в 10 постов. Про потере или поломке пистолета можно восстановить у любого оружейника за 9К кредитов материалов.</p>`, img:"ab1" },
-    ab2: { title:"2. Munitions sur mesure", text:`<p>При желании Мари может создать до двух магазинов на квест различных патронов. Патроны в одном магазине обязаны быть одного типа без изменения. Можно создать патроны следующих типов.<br>Отравляющий - увеличивают время регенерации вдвое.<br>ЭМИ - снижают класс пробития на 2, при том наносят ЭМИ 3 уровня, глуша электронику до 2 постов.<br>Некротические - вызывают гниение ткани, уменьшая характеристики органических конечностей, в которые попадает на ×2.<br>Бронебойные - увеличивают КП на 1.<br>КД между сравним патронов - 4 поста. Максимум за квест - 2 магазина.</p>`, img:"ab2" },
-    ab3: { title:"3. Rafale de plomb", text:`<p>Видоизменяет пистолет, увеличивая раму, увеличивая магазин и уменьшая ход ствола. Пистолет увеличивает скоростей до 1100 ВВМ, магазин до 20 патронов и даёт ему автоматический режим огня. Не может быть бесшумным, даже при стороннем воздействие ПСИ. КД между стеной режимов - 5 постов.</p>`, img:"ab3" },
-    ab4: { title:"4. Ombre silencieuse", text:`<p>Базовый режим пистолета. Пистолет обладает оглашенными в первой способности характеристиками, при том имеет абсолютно бесзвучную стрельбу. Может раз в 10 постов сделать один выстрел на +2 класса пробития, суммируется с бронебойными патронами.</p>`, img:"ab4" },
-    ab5: { title:"5. Éclat aveuglant", text:`<p>Создаёт магазин светошумовые патронов, при столкновении с препятствием создают вспышку и хлопок, оглушающий и ослепляющие всех, кто был в радиусе 5 метров, если цель не имела защиты. ВД ослепления - 2 поста, ВД оглушения - 3 поста, макс. магазинов за квест - 2, КД между созданием - 4 поста.</p>`, img:"ab5" },
-    ab6: { title:"6. Ombre totale", text:`<p>По щелчку пальцев гасит все источники света в радиусе 40 метров. Если источник света погасить невозможно (окна, солнце), создаёт сферу радиусом 15 метров, куда полностью не проходит свет. ВД - 4 поста, КД - 6 постов.</p>`, img:"ab6" },
-    ab7: { title:"7. Œil de minuit", text:`<p>Мари имеет защищённое зрение. Оно позволяет ей видеть даже без источников света, а так же защищает её от ярких вспышек. Кошачье зрение, хуже мое, только в полной темноте тоже видит. Пассивно.</p>`, img:"ab7" },
-    ab8: { title:"8. Murmure du réseau", text:`<p>Мари имеет ряд информаторов по всему МИО. Дважды за квест она может узнать информацию о местоположение объекта, информацию о нем, о его слабостях или ещё какие-то вопросы. Ответ приходит через два поста с полным ответом на вопрос.</p>`, img:"ab8" },
-    ab9: { title:"9. Visage d’argile", text:`<p>При желании Мари может сменить свое лицо на любое другое, но не может изменить тело, телосложение, силуэт и др. Пассивно. Лицо меняется не чаще чем с промежутком в 4 поста.</p>`, img:"ab9" },
-    ab10: { title:"10. Poche de nulle part", text:`<p>Мари имеет пространственный карман, куда можно засунуть не более 3 предметов инвентаря, комплекты брони, станки оружия идут единым комплектом и считаются за один предмет. Пассивно.</p>`, img:"ab10" }
+    general: { title:"ОБЩИЕ ДАННЫЕ", text:`<h3>ОСНОВНЫЕ СВЕДЕНИЯ</h3><p><b>Имя | Фамилия:</b> Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд)<br><b>Прозвище:</b> «Курьер 6»<br><b>Раса:</b> Человек<br><b>Возраст:</b> 23 года<br><b>Под деятельности:</b> наемник</p>`, img:"all", theme: { bg: '#050505', border: '#FFFFFF', shadow: 'rgba(255,255,255,0.2)' } },
+    app: { title:"ВНЕШНОСТЬ", text:`<p>Мари - высокая девушка, ростом чуть ниже 190 сантиметров и слегка атлетическим телосложением. Суперспортсменкой, способной одной рукой тягать штанги её конечно не назовешь, но тело её гибкое и податливое, что позволяет ему как-угодно выгинаться и куда-угодно пролезать. Девушка имеет недлинные серый волосы пепельного оттенка и золотистые глаза, на свету переливающиеся серым. Мари имеет длинные ноги с широкими бедрами, при узкой тазовой кости, что лишь помогает в том, чтобы пролезать туда, куда, казалось бы, она пролезать не должна. Предпочитает деловитый стиль одежды для работы и вполне открытый уличный для дома и прогулок.</p>`, img:"app", theme: { bg: '#1a1a1a', border: '#888888', shadow: 'rgba(136,136,136,0.3)' } },
+    pers: { title:"ХАРАКТЕР", text:`<p>Характер Мари достаточно прост для объяснения, она научилась абстрагироваться от работы в мирное время и от мирной жизни на работе, полностью разделяя эти понятия и цели от своей личной жизни. Примерно по этой причине она может весело проводить время в клубе, а через минуту уже нажимать на детонатор в этом же самом клубе. В мирное время она веселая, не слишком сдержанная девушка с личными амбициями и активным образом жизни, на работе же холодный профессионал, безэмоционально оружие, убийцы.</p>`, img:"char", theme: { bg: '#050505', border: '#D500F9', shadow: 'rgba(213,0,249,0.5)' } },
+    bio: { title:"БИОГРАФИЯ", text:`<p>Мари Оствуд (полное имя Мари Элеонора Рэйвен Клэр Сабле Оствуд) родилась в жилом районе блокпоста №13 в достаточно зажиточной семьи. Её родители работали в МИО, мать работала в бухгалтерии органов МИО, а отец был военнослужащим. Несмотря на подобное воспитание и вполне завершение школы с отличием - у Мари не выработалось практически никакого патриотизма к МИО. В 12 лет она ввязалась в не самую лучшую маргинальную компанию, многие члены которой в будущем стали членами банд серого района, членами Кракена, лишь малая часть устроилась на приличные работы. С 14 лет Мари и её окружение начали проворачивать сомнительные схемы, подстраивать несчастные случаи с их участием, чтобы получить с них денег, подворовывать и другое, а в 16 лет Мари прибилась к одной из банд Серого района как курьер под номером 6. В 17 лет она впервые убила человека, застрелив того при самообороне я а с 19 начала промышлять подобными убийствами на заказ. От банды она отвязалась в 22, сейчас работает как частное лицо, не закреплённое за определенной ситуацией. Выполняла задания и для МИО.</p>`, img:"bio", theme: { bg: '#150505', border: '#FFD700', shadow: 'rgba(255,215,0,0.4)' } },
+    ned: { title:"НЕДОСТАТКИ", text:`<p><b>Плохой пример.</b> Не может получать репутацию корпораций.<br><b>Смутная репутация.</b> Не имеет друзей даже в приступом мире. Не получает плюсы от хорошей и плохой репутации, за исключением статусов.</p>`, img:"ned", theme: { bg: '#0a0a0c', border: '#555555', shadow: 'rgba(85,85,85,0.2)' } },
+    base: { title:"БАЗА ПЕРСОНАЖА", text:`<h3>Особенности расы:</h3><p>Любой полноценный человек, чистый генетически, обладает высоким социальным статусом. МИО всюду твердит о господстве человечества из-за чего люди зачастую предвзяты к другим не людям, наверное кроме личей. Люди - главные ксенофобы.<br>Для установки имплантов, людям необходимо обратиться в спец. учреждения или к частному медику для проведения вживления.<br><b>*Человек получает в 1.5 раза больше опыта и денег с квестов</b></p><h3>Навыки:</h3><p>• Стрельба из одноручного орудия на армейском уровне<br>• Навык взлома замков на уровне опытного медвежатника<br>• Возможность тихонько перемещаться<br>• Способность стрелять по македонски<br>• Базовые знания анатомии</p>`, img:null, theme: { bg: '#0a0d10', border: '#7c9cb0', shadow: 'rgba(124,156,176,0.2)' } },
+    
+    ab1: { title:"1. Clair de Lune", text:`<p>Clair de Lune - название уникального пистолета Мари сделанного для нее на заказ неизвестным оружейником, обосновавшимся в подземельях Руин Старого Города. Пистолет выглядит как глубокая модификация старого пистолета калибра .45 ACP с увеличенной рамой и затвором, магазином на 8 патронов и съемным глушителем на стволе. Сам по себе пистолет бесполезен и даже не может стрелять, однако пистолет имеет ряд уникальных свойств, заметно увеличивающих его эффективность. Для начала пистолет имеет способность перенимать свойства любого оружия в инвентаре, стреляющего патронами. Он перенимает КП, особенности и другое, оставляя за собой лишь дальность стрельбы в 75 метров, скорострельность 70 ВВМ и боезапас на 8 патронов. Смена выбранного оружия происходит за 1 действие, не чаще чем раз в 10 постов. Про потере или поломке пистолета можно восстановить у любого оружейника за 9К кредитов материалов.</p>`, img:"ab1", theme: { bg: '#000B1E', border: '#00B0FF', shadow: 'rgba(0,176,255,0.5)' } },
+    ab2: { title:"2. Munitions sur mesure", text:`<p>При желании Мари может создать до двух магазинов на квест различных патронов. Патроны в одном магазине обязаны быть одного типа без изменения. Можно создать патроны следующих типов.<br>Отравляющий - увеличивают время регенерации вдвое.<br>ЭМИ - снижают класс пробития на 2, при том наносят ЭМИ 3 уровня, глуша электронику до 2 постов.<br>Некротические - вызывают гниение ткани, уменьшая характеристики органических конечностей, в которые попадает на ×2.<br>Бронебойные - увеличивают КП на 1.<br>КД между сравним патронов - 4 поста. Максимум за квест - 2 магазина.</p>`, img:"ab2", theme: { bg: '#1A0000', border: '#FF1744', shadow: 'rgba(255,23,68,0.5)' } },
+    ab3: { title:"3. Rafale de plomb", text:`<p>Видоизменяет пистолет, увеличивая раму, увеличивая магазин и уменьшая ход ствола. Пистолет увеличивает скоростей до 1100 ВВМ, магазин до 20 патронов и даёт ему автоматический режим огня. Не может быть бесшумным, даже при стороннем воздействие ПСИ. КД между стеной режимов - 5 постов.</p>`, img:"ab3", theme: { bg: '#050505', border: '#00E676', shadow: 'rgba(0,230,118,0.5)' } },
+    ab4: { title:"4. Ombre silencieuse", text:`<p>Базовый режим пистолета. Пистолет обладает оглашенными в первой способности характеристиками, при том имеет абсолютно бесзвучную стрельбу. Может раз в 10 постов сделать один выстрел на +2 класса пробития, суммируется с бронебойными патронами.</p>`, img:"ab4", theme: { bg: '#050505', border: '#651FFF', shadow: 'rgba(101,31,255,0.5)' } },
+    ab5: { title:"5. Éclat aveuglant", text:`<p>Создаёт магазин светошумовые патронов, при столкновении с препятствием создают вспышку и хлопок, оглушающий и ослепляющие всех, кто был в радиусе 5 метров, если цель не имела защиты. ВД ослепления - 2 поста, ВД оглушения - 3 поста, макс. магазинов за квест - 2, КД между созданием - 4 поста.</p>`, img:"ab5", theme: { bg: '#050505', border: '#FFEA00', shadow: 'rgba(255,234,0,0.5)' } },
+    ab6: { title:"6. Ombre totale", text:`<p>По щелчку пальцев гасит все источники света в радиусе 40 метров. Если источник света погасить невозможно (окна, солнце), создаёт сферу радиусом 15 метров, куда полностью не проходит свет. ВД - 4 поста, КД - 6 постов.</p>`, img:"ab6", theme: { bg: '#000000', border: '#FFFFFF', shadow: 'rgba(255,255,255,0.3)' } },
+    ab7: { title:"7. Œil de minuit", text:`<p>Мари имеет защищённое зрение. Оно позволяет ей видеть даже без источников света, а так же защищает её от ярких вспышек. Кошачье зрение, хуже мое, только в полной темноте тоже видит. Пассивно.</p>`, img:"ab7", theme: { bg: '#0A0A0A', border: '#2962FF', shadow: 'rgba(41,98,255,0.5)' } },
+    ab8: { title:"8. Murmure du réseau", text:`<p>Мари имеет ряд информаторов по всему МИО. Дважды за квест она может узнать информацию о местоположение объекта, информацию о нем, о его слабостях или ещё какие-то вопросы. Ответ приходит через два поста с полным ответом на вопрос.</p>`, img:"ab8", theme: { bg: '#050505', border: '#D500F9', shadow: 'rgba(213,0,249,0.5)' } },
+    ab9: { title:"9. Visage d'argile", text:`<p>При желании Мари может сменить свое лицо на любое другое, но не может изменить тело, телосложение, силуэт и др. Пассивно. Лицо меняется не чаще чем с промежутком в 4 поста.</p>`, img:"ab9", theme: { bg: '#050505', border: '#2979FF', shadow: 'rgba(41,121,255,0.5)' } },
+    ab10: { title:"10. Poche de nulle part", text:`<p>Мари имеет пространственный карман, куда можно засунуть не более 3 предметов инвентаря, комплекты брони, станки оружия идут единым комплектом и считаются за один предмет. Пассивно.</p>`, img:"ab10", theme: { bg: '#1A001A', border: '#F50057', shadow: 'rgba(245,0,87,0.5)' } }
   };
 
   function toggleSub(group) {
@@ -304,12 +310,30 @@
     currentSection = id; currentIdx = sections.indexOf(id);
     document.getElementById('app').classList.add('is-open');
     updateUI(id);
+    
+    if (isEditing) {
+        isEditing = false;
+        document.getElementById('btn-edit').textContent = '✎ РЕДАКТИРОВАТЬ';
+        const textEl = document.getElementById('win-text');
+        if (textEl) { textEl.contentEditable = false; textEl.style.outline = 'none'; }
+    }
+
+    // Применяем тему окна
+    const win = document.getElementById('content-window');
+    const th = data[id].theme || { bg: '#050505', border: '#FFFFFF', shadow: 'rgba(255,255,255,0.05)' };
+    win.style.backgroundColor = th.bg;
+    win.style.borderColor = th.border;
+    win.style.boxShadow = `0 0 50px ${th.shadow}`;
+
     const loader = document.getElementById('loader'); loader.classList.remove('hidden');
     document.getElementById('win-title').textContent = data[id].title;
     
-    let html = `<div class="text-col">${data[id].text}</div>`;
+    let html = `<div class="text-col" id="win-text">${data[id].text}</div>`;
     if(data[id].img) {
-      html += `<div class="img-col" id="img-slot"><div class="img-placeholder">[ ${data[id].img.toUpperCase()}.PNG ]</div></div>`;
+      const imgPath = data[id].img.toLowerCase() + '.png';
+      html += `<div class="img-col" id="img-slot">
+        <img src="${imgPath}" alt="MEDIA" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'img-placeholder\\'>[ ${data[id].img.toUpperCase()}.PNG ]</div>';">
+      </div>`;
     }
     document.getElementById('win-body').innerHTML = html;
     setTimeout(() => loader.classList.add('hidden'), 300);
@@ -334,10 +358,19 @@
   }
 
   window.navPage = function(dir) { currentIdx+=dir; if(currentIdx<0) currentIdx=sections.length-1; if(currentIdx>=sections.length) currentIdx=0; openWindow(sections[currentIdx]); };
-  function toggleEdit() { isEditing=!isEditing; const b=document.getElementById('btn-edit'); b.textContent=isEditing?'✎ ЗАВЕРШИТЬ':'✎ РЕДАКТИРОВАТЬ'; document.getElementById('win-text').contentEditable=isEditing; }
+  
+  function toggleEdit() {
+     const textEl = document.getElementById('win-text');
+     if (!textEl) return; 
+     isEditing = !isEditing;
+     const b = document.getElementById('btn-edit');
+     b.textContent = isEditing ? '✎ ЗАВЕРШИТЬ' : '✎ РЕДАКТИРОВАТЬ';
+     textEl.contentEditable = isEditing;
+     textEl.style.outline = isEditing ? '2px dashed var(--accent)' : 'none';
+  }
+
   function saveFile() { const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='TERMINAL_BACKUP.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 
-  // 🔐 CODE SYSTEM
   const codeInput = document.getElementById('secretCode'), activateBtn = document.getElementById('activateCodeBtn'), codeStatus = document.getElementById('codeStatus'), secretOverlay = document.getElementById('secret-overlay');
   const SECRETS = { 
     '7821': () => { codeStatus.textContent='✓ КОД ПРИНЯТ'; codeStatus.className='code-status success'; secretOverlay.classList.add('active'); setTimeout(()=>secretOverlay.classList.remove('active'),3000); },
@@ -346,17 +379,15 @@
   function processCode() { const raw=codeInput.value.trim().toUpperCase(); codeStatus.className='code-status'; if(!raw){codeStatus.textContent='⚠ ПУСТО'; codeStatus.className='code-status error'; return;} codeStatus.textContent='ПРОВЕРКА...'; if(SECRETS[raw]){SECRETS[raw](); codeInput.value='';} else { codeStatus.textContent='✗ НЕ НАЙДЕН'; codeStatus.className='code-status error'; } }
   activateBtn.addEventListener('click', processCode); codeInput.addEventListener('keypress', e=>{if(e.key==='Enter')processCode();});
 
-  // 🎛️ AUDIO PLAYER & EQ
   const testAudio = document.getElementById('media-audio');
   testAudio.volume = 0.8;
   let audioCtx, analyser, source, isEqInitialized = false;
-  // Структура: { src: "файл", name: "Отображаемое имя" }
   let tracks = [
     { src: "fallout1.mp3", name: "Rangers" },
     { src: "fallout2.mp3", name: "Republic" },
     { src: "olen.mp3", name: "Олений пенис" },
     { src: "test1.mp3", name: "Легенда" },
-    { src: "john.mp3", name: "A Long Way Down" }, // По умолчанию
+    { src: "john.mp3", name: "A Long Way Down" },
     { src: "gachi1.mp3", name: "Чёрные глаза" },
     { src: "gachi2.mp3", name: "Мальчик на девятке" },
     { src: "kiss.mp3", name: "Kiss Me Again" },
@@ -364,7 +395,7 @@
     { src: "gas.mp3", name: "GAS GAS GAS" },
     { src: "reeeg.mp3", name: "Режим" }
   ];
-  let currentTrack = 4; // john.mp3 по умолчанию
+  let currentTrack = 4;
   let progressInterval;
 
   const eqCanvas = document.getElementById('eq-bg'), eqCtx = eqCanvas.getContext('2d');
@@ -423,7 +454,6 @@
   function renderTracklist() {
     const tl = document.getElementById('tracklist');
     if(!tl) return;
-    // Используем tracks[i].name для отображения
     tl.innerHTML = tracks.map((t,i) => `<div class="track-item ${i===currentTrack?'active':''}" onclick="selectTrack(${i})">${t.name}</div>`).join('');
   }
 
