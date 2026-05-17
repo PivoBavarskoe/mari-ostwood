@@ -97,11 +97,9 @@
   .close-btn { margin-top: 10px; background: var(--bg); color: var(--fg); cursor: pointer; text-align: center; font-family: var(--font-pixel); font-size: 0.6rem; padding: 10px 15px; width: 100%; box-shadow: inset 0 0 0 2px var(--fg); transition: 0.2s; letter-spacing: 1px; }
   .close-btn:hover { background: var(--fg); color: var(--bg); }
 
-  /* === CONTENT WINDOW (DYNAMIC THEMING) === */
+  /* === CONTENT WINDOW === */
   #content-window { position: absolute; right: 5%; left: 22%; top: 5%; bottom: 5%; 
-    /* Фон и рамка управляются через JS */
-    background-color: #050505;
-    border: 3px solid #FFFFFF;
+    background-color: #050505; border: 3px solid #FFFFFF;
     box-shadow: 0 0 40px rgba(255,255,255,0.05);
     display: flex; flex-direction: column; 
     opacity: 0; pointer-events: none; transform: scale(0.95); transition: opacity 0.5s, transform 0.5s, background-color 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease; 
@@ -114,9 +112,10 @@
   .text-col h3 { font-family: var(--font-pixel); font-size: 0.55rem; margin: 10px 0 8px; border-bottom: 2px dashed var(--dim); padding-bottom: 4px; color: var(--fg); }
   .text-col p { margin-bottom: 10px; }
   
-  .img-col { flex: 1; min-width: 220px; max-width: 300px; border: 2px solid var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #050505; overflow: hidden; }
+  /* FIXED SIZE IMAGE CONTAINER - 1:1 RATIO */
+  .img-col { width: 300px; height: 300px; min-width: 300px; min-height: 300px; border: 2px solid var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #050505; overflow: hidden; flex-shrink: 0; }
   .img-col img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .img-placeholder { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--dim); text-align: center; padding: 20px; }
+  .img-placeholder { font-family: var(--font-pixel); font-size: 1.2rem; color: var(--dim); text-align: center; padding: 20px; }
 
   .win-footer { padding: 12px 20px; border-top: 2px solid var(--fg); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
   .footer-controls { display: flex; gap: 10px; }
@@ -150,14 +149,32 @@
   .loader-circle::before { content: ''; position: absolute; inset: 0; border: 4px solid var(--dim); border-radius: 50%; }
   .loader-circle::after { content: ''; position: absolute; inset: 0; border: 4px solid transparent; border-top-color: var(--fg); border-radius: 50%; animation: loadSpin 3s ease-in-out infinite; }
   @keyframes loadSpin { 0% { transform: rotate(0deg); } 30% { transform: rotate(180deg); } 50% { transform: rotate(180deg); } 80% { transform: rotate(-180deg); } 100% { transform: rotate(0deg); } }
+
+  /* === 🎰 CASE ROULETTE === */
+  #case-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.95); z-index: 9997; display: none; flex-direction: column; align-items: center; justify-content: center; }
+  #case-overlay.active { display: flex; }
+  .case-title { font-family: var(--font-pixel); font-size: 1.2rem; color: var(--fg); margin-bottom: 30px; animation: blink 1s infinite; }
+  .case-container { width: 600px; height: 120px; border: 3px solid var(--fg); position: relative; overflow: hidden; background: #0a0a0a; }
+  .case-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 15px solid var(--accent); z-index: 10; filter: drop-shadow(0 0 8px var(--accent)); }
+  .case-strip { display: flex; position: absolute; left: 0; top: 0; height: 100%; transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1); }
+  .case-item { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--font-pixel); font-size: 0.45rem; padding: 8px; border-right: 1px solid var(--dim); flex-shrink: 0; background: #111; color: var(--dim); }
+  .case-item.winner { background: var(--accent); color: var(--bg); border: 2px solid var(--fg); font-size: 0.5rem; }
+  .case-result { font-family: var(--font-pixel); font-size: 0.8rem; color: var(--accent); margin-top: 20px; min-height: 1.5em; text-align: center; }
+  .case-close { margin-top: 20px; background: var(--bg); color: var(--fg); border: 2px solid var(--fg); font-family: var(--font-pixel); font-size: 0.6rem; padding: 10px 20px; cursor: pointer; }
+  .case-close:hover { background: var(--fg); color: var(--bg); }
+
   ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--dim); } ::-webkit-scrollbar-thumb:hover { background: var(--fg); }
   @media (max-width: 900px) {
     #app { flex-direction: column; height: auto; margin-top: 56px; }
     #menu-panel { width: 100%; max-width: 100%; padding: 15px; align-items: center; max-height: auto; }
     #app.is-open #menu-panel { width: 100%; padding: 10px; transform: none; align-items: center; }
     #content-window { position: relative; right: auto; left: auto; top: auto; bottom: auto; width: 95%; margin: 10px auto; height: 65vh; }
-    .win-body { flex-direction: column; } .img-col { max-width: 100%; min-width: auto; height: 200px; }
-    .btn-arrow { font-size: 0.6rem; padding: 10px 15px; } .marquee-bar { font-size: 0.55rem; padding: 5px 0; } .intro-side { display: none; } .win-toggle-btn { top: 14px; }
+    .win-body { flex-direction: column; } 
+    .img-col { width: 100%; max-width: 300px; min-width: auto; height: 300px; margin: 0 auto; }
+    .btn-arrow { font-size: 0.6rem; padding: 10px 15px; } 
+    .marquee-bar { font-size: 0.55rem; padding: 5px 0; } 
+    .intro-side { display: none; } 
+    .win-toggle-btn { top: 14px; }
   }
 </style>
 </head>
@@ -184,6 +201,17 @@
 <div id="closing-screen-1" class="closing-overlay"><div class="closing-text">⚠ ОШИБКА ДОСТУПА ⚠<br>ПОВТОРИТЕ ПОПЫТКУ</div><div class="closing-subtext">СИСТЕМА ЗАЩИТЫ АКТИВИРОВАНА</div></div>
 <div id="closing-screen-2" class="closing-overlay"><div class="closing-text">ЗАКРЫТИЕ... ПОДОЖДИТЕ</div><div class="closing-loader"><div class="closing-loader-bar" id="closing-loader-bar"></div></div><div class="closing-subtext" id="closing-error-msg"></div></div>
 <div id="secret-overlay"><div class="secret-word">ХУЙ</div></div>
+
+<!-- CASE ROULETTE OVERLAY -->
+<div id="case-overlay">
+  <div class="case-title">[ ОТКРЫТИЕ КОНТЕЙНЕРА ]</div>
+  <div class="case-container">
+    <div class="case-pointer"></div>
+    <div class="case-strip" id="caseStrip"></div>
+  </div>
+  <div class="case-result" id="caseResult"></div>
+  <button class="case-close" onclick="closeCase()">[ ЗАКРЫТЬ ]</button>
+</div>
 
 <div class="marquee-bar top"><div class="marquee-content">/// SYSTEM TERMINAL v9.4.1 /// MILITOCRATIC EMPIRE OF UNITY /// SECURE CONNECTION ESTABLISHED /// DATA STREAM ACTIVE /// WARNING: UNAUTHORIZED ACCESS PROHIBITED /// FLKR-J MODEL DETECTED ///</div></div>
 <canvas id="matrix-bg"></canvas><div class="bg-grid"></div><div class="vignette"></div><div class="glow-effect"></div><canvas id="eq-bg"></canvas>
@@ -257,7 +285,10 @@
       document.getElementById('intro-loader').classList.add('done');
       document.getElementById('intro-processes').classList.add('done');
       document.getElementById('intro-tabs').classList.add('done');
-      setTimeout(()=>{ document.getElementById('intro-screen').classList.add('hidden'); document.getElementById('app').classList.add('visible'); },1000);
+      setTimeout(()=>{ 
+        document.getElementById('intro-screen').classList.add('hidden'); 
+        document.getElementById('app').classList.add('visible');
+      },1000);
     },6000);
   });
 
@@ -371,13 +402,80 @@
 
   function saveFile() { const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='TERMINAL_BACKUP.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 
+  // === 🎰 CASE ROULETTE SYSTEM ===
+  const caseItems = [
+    "Пиво пишет пост всегда вовремя", // Есть в списке, но НИКОГДА не выпадает
+    "Нет, иди нахуй",
+    "Смерть в нищите",
+    "Бан за воздух",
+    "Покой в богатстве",
+    "Черемша"
+  ];
+  
+  function openCase() {
+    const overlay = document.getElementById('case-overlay');
+    const strip = document.getElementById('caseStrip');
+    const result = document.getElementById('caseResult');
+    
+    overlay.classList.add('active');
+    result.textContent = '';
+    
+    // Создаем ленту с предметами
+    let html = '';
+    const totalItems = 30;
+    const winnerIndex = 25; 
+    
+    // "Пиво пишет пост всегда вовремя" (индекс 0) НИКОГДА не выпадает
+    // Выбираем случайный предмет из индексов 1-5
+    const possibleWinners = [1, 2, 3, 4, 5];
+    const winnerItemIndex = possibleWinners[Math.floor(Math.random() * possibleWinners.length)];
+    
+    for (let i = 0; i < totalItems; i++) {
+      const itemText = caseItems[winnerItemIndex];
+      const isWinner = (i === winnerIndex);
+      html += `<div class="case-item ${isWinner ? 'winner' : ''}">${itemText}</div>`;
+    }
+    
+    strip.innerHTML = html;
+    strip.style.transform = 'translateX(0)';
+    
+    // Запускаем прокрутку
+    setTimeout(() => {
+      const itemWidth = 120;
+      const targetPosition = -(winnerIndex * itemWidth) + (300 - itemWidth/2);
+      strip.style.transform = `translateX(${targetPosition}px)`;
+    }, 100);
+    
+    // Показываем результат
+    setTimeout(() => {
+      result.textContent = '★ ' + caseItems[winnerItemIndex] + ' ★';
+    }, 4200);
+  }
+  
+  function closeCase() {
+    document.getElementById('case-overlay').classList.remove('active');
+  }
+
   const codeInput = document.getElementById('secretCode'), activateBtn = document.getElementById('activateCodeBtn'), codeStatus = document.getElementById('codeStatus'), secretOverlay = document.getElementById('secret-overlay');
   const SECRETS = { 
     '7821': () => { codeStatus.textContent='✓ КОД ПРИНЯТ'; codeStatus.className='code-status success'; secretOverlay.classList.add('active'); setTimeout(()=>secretOverlay.classList.remove('active'),3000); },
-    '2243': () => { codeStatus.textContent='✓ АУДИО МОДУЛЬ РАЗБЛОКИРОВАН'; codeStatus.className='code-status success'; document.getElementById('audio-menu-btn').style.display = 'block'; openWindow('audio'); }
+    '2243': () => { codeStatus.textContent='✓ АУДИО МОДУЛЬ РАЗБЛОКИРОВАН'; codeStatus.className='code-status success'; document.getElementById('audio-menu-btn').style.display = 'block'; openWindow('audio'); },
+    '1337': () => { codeStatus.textContent='✓ КОНТЕЙНЕР ОТКРЫТ'; codeStatus.className='code-status success'; openCase(); },
+    '1111': () => { codeStatus.textContent='Кто прочитал, тот гей'; codeStatus.className='code-status success'; },
+    '1488': () => { window.location.href = 'https://www.gotoquiz.com/how_much_of_a_nazi_are_you'; }
   };
-  function processCode() { const raw=codeInput.value.trim().toUpperCase(); codeStatus.className='code-status'; if(!raw){codeStatus.textContent='⚠ ПУСТО'; codeStatus.className='code-status error'; return;} codeStatus.textContent='ПРОВЕРКА...'; if(SECRETS[raw]){SECRETS[raw](); codeInput.value='';} else { codeStatus.textContent='✗ НЕ НАЙДЕН'; codeStatus.className='code-status error'; } }
-  activateBtn.addEventListener('click', processCode); codeInput.addEventListener('keypress', e=>{if(e.key==='Enter')processCode();});
+  
+  function processCode() { 
+    const raw=codeInput.value.trim().toUpperCase(); 
+    codeStatus.className='code-status'; 
+    if(!raw){codeStatus.textContent='⚠ ПУСТО'; codeStatus.className='code-status error'; return;} 
+    codeStatus.textContent='ПРОВЕРКА...'; 
+    if(SECRETS[raw]){SECRETS[raw](); codeInput.value='';} 
+    else { codeStatus.textContent='✗ НЕ НАЙДЕН'; codeStatus.className='code-status error'; } 
+  }
+  
+  activateBtn.addEventListener('click', processCode); 
+  codeInput.addEventListener('keypress', e=>{if(e.key==='Enter')processCode();});
 
   const testAudio = document.getElementById('media-audio');
   testAudio.volume = 0.8;
